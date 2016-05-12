@@ -19,10 +19,10 @@ public class TransactionManager {
         this.transactionConfigurator = transactionConfigurator;
     }
 
+    // TODO Anders 是否需要改为ThreadLocal，transactionMap需要清空
     private final Map<Thread, Transaction> transactionMap = new ConcurrentHashMap<Thread, Transaction>();
 
     public void begin() {
-
         Transaction transaction = new Transaction(TransactionType.ROOT);
         TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
         transactionRepository.create(transaction);
@@ -31,7 +31,6 @@ public class TransactionManager {
     }
 
     public void propagationNewBegin(TransactionContext transactionContext) {
-
         Transaction transaction = new Transaction(transactionContext);
         transactionConfigurator.getTransactionRepository().create(transaction);
 
