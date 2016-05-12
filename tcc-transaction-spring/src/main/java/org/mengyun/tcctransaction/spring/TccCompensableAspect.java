@@ -8,34 +8,29 @@ import org.mengyun.tcctransaction.interceptor.CompensableTransactionInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 
-/**
- * Created by changmingxie on 10/30/15.
- */
 @Aspect
 public class TccCompensableAspect implements Ordered {
 
-    private int order = Ordered.HIGHEST_PRECEDENCE;
+	private int order = Ordered.HIGHEST_PRECEDENCE;
 
-    @Autowired
-    private CompensableTransactionInterceptor compensableTransactionInterceptor;
+	@Autowired
+	private CompensableTransactionInterceptor compensableTransactionInterceptor;
 
-    @Pointcut("@annotation(org.mengyun.tcctransaction.Compensable)")
-    public void compensableService() {
+	@Pointcut("@annotation(org.mengyun.tcctransaction.Compensable)")
+	public void compensableService() {
+	}
 
-    }
+	@Around("compensableService()")
+	public void interceptCompensableMethod(ProceedingJoinPoint pjp) throws Throwable {
+		compensableTransactionInterceptor.interceptCompensableMethod(pjp);
+	}
 
-    @Around("compensableService()")
-    public void interceptCompensableMethod(ProceedingJoinPoint pjp) throws Throwable {
+	@Override
+	public int getOrder() {
+		return order;
+	}
 
-        compensableTransactionInterceptor.interceptCompensableMethod(pjp);
-    }
-
-    @Override
-    public int getOrder() {
-        return order;
-    }
-
-    public void setOrder(int order) {
-        this.order = order;
-    }
+	public void setOrder(int order) {
+		this.order = order;
+	}
 }

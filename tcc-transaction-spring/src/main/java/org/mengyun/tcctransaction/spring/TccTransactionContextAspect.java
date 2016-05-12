@@ -8,34 +8,29 @@ import org.mengyun.tcctransaction.interceptor.ResourceCoordinatorInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 
-/**
- * Created by changmingxie on 11/8/15.
- */
 @Aspect
 public class TccTransactionContextAspect implements Ordered {
 
-    private int order = Ordered.HIGHEST_PRECEDENCE + 1;
+	private int order = Ordered.HIGHEST_PRECEDENCE + 1;
 
-    @Autowired
-    private ResourceCoordinatorInterceptor resourceCoordinatorInterceptor;
+	@Autowired
+	private ResourceCoordinatorInterceptor resourceCoordinatorInterceptor;
 
-    @Pointcut("execution(public * *(org.mengyun.tcctransaction.api.TransactionContext,..))||@annotation(org.mengyun.tcctransaction.Compensable)")
-    public void transactionContextCall() {
+	@Pointcut("execution(public * *(org.mengyun.tcctransaction.api.TransactionContext,..))||@annotation(org.mengyun.tcctransaction.Compensable)")
+	public void transactionContextCall() {
+	}
 
-    }
+	@Around("transactionContextCall()")
+	public void interceptTransactionContextMethod(ProceedingJoinPoint pjp) throws Throwable {
+		resourceCoordinatorInterceptor.interceptTransactionContextMethod(pjp);
+	}
 
-    @Around("transactionContextCall()")
-    public void interceptTransactionContextMethod(ProceedingJoinPoint pjp) throws Throwable {
+	@Override
+	public int getOrder() {
+		return order;
+	}
 
-        resourceCoordinatorInterceptor.interceptTransactionContextMethod(pjp);
-    }
-
-    @Override
-    public int getOrder() {
-        return order;
-    }
-
-    public void setOrder(int order) {
-        this.order = order;
-    }
+	public void setOrder(int order) {
+		this.order = order;
+	}
 }

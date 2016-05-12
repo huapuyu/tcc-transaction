@@ -7,19 +7,15 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
 
-/**
- * Created by changmingxie on 11/20/15.
- */
 @Component
 public class TccBeanPostProcessor implements ApplicationListener<ContextRefreshedEvent> {
 
-    @Override
-    public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
-        ApplicationContext applicationContext = contextRefreshedEvent.getApplicationContext();
+	@Override
+	public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
+		ApplicationContext applicationContext = contextRefreshedEvent.getApplicationContext();
 
-        if (applicationContext.getParent() == null) {
-
-            BeanFactoryAdapter.setBeanFactory(applicationContext.getBean(BeanFactory.class));
-        }
-    }
+		if (applicationContext.getParent() == null) {
+			BeanFactoryAdapter.setBeanFactory(applicationContext.getBean(BeanFactory.class));
+		}
+	}
 }
