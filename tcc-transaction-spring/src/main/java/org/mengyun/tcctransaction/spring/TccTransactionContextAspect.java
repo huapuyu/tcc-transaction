@@ -16,7 +16,7 @@ public class TccTransactionContextAspect implements Ordered {
 	@Autowired
 	private ResourceCoordinatorInterceptor resourceCoordinatorInterceptor;
 
-	@Pointcut("execution(public * *(org.mengyun.tcctransaction.api.TransactionContext,..))||@annotation(org.mengyun.tcctransaction.Compensable)")
+	@Pointcut("execution(public * *(org.mengyun.tcctransaction.api.TransactionContext, ..)) || @annotation(org.mengyun.tcctransaction.Compensable)")
 	public void transactionContextCall() {
 	}
 

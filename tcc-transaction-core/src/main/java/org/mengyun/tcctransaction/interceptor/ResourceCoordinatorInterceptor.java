@@ -18,9 +18,6 @@ import org.mengyun.tcctransaction.support.TransactionConfigurator;
 import org.mengyun.tcctransaction.utils.CompensableMethodUtils;
 import org.mengyun.tcctransaction.utils.ReflectionUtils;
 
-/**
- * Created by changmingxie on 11/8/15.
- */
 public class ResourceCoordinatorInterceptor {
 
 	private TransactionConfigurator transactionConfigurator;

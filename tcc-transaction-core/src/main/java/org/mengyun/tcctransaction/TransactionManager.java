@@ -79,6 +79,5 @@ public class TransactionManager {
 			// TODO Anders 确定要封装成RuntimeException
 			throw new RuntimeException(rollbackException);
 		}
-
 	}
 }

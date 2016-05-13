@@ -2,16 +2,13 @@ package org.mengyun.tcctransaction.interceptor;
 
 import org.apache.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.mengyun.tcctransaction.common.MethodType;
 import org.mengyun.tcctransaction.NoExistedTransactionException;
 import org.mengyun.tcctransaction.api.TransactionContext;
 import org.mengyun.tcctransaction.api.TransactionStatus;
+import org.mengyun.tcctransaction.common.MethodType;
 import org.mengyun.tcctransaction.support.TransactionConfigurator;
 import org.mengyun.tcctransaction.utils.CompensableMethodUtils;
 
-/**
- * Created by changmingxie on 10/30/15.
- */
 public class CompensableTransactionInterceptor {
 
 	private static final Logger LOGGER = Logger.getLogger(CompensableTransactionInterceptor.class);
