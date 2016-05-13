@@ -3,13 +3,9 @@ package org.mengyun.tcctransaction.utils;
 import org.mengyun.tcctransaction.common.MethodType;
 import org.mengyun.tcctransaction.api.TransactionContext;
 
-/**
- * Created by changmingxie on 11/21/15.
- */
 public class CompensableMethodUtils {
 
 	public static MethodType calculateMethodType(TransactionContext transactionContext, boolean isCompensable) {
-
 		if (transactionContext == null && isCompensable) {
 			// isRootTransactionMethod
 			return MethodType.ROOT;
@@ -37,12 +33,10 @@ public class CompensableMethodUtils {
 	}
 
 	public static TransactionContext getTransactionContextFromArgs(Object[] args) {
-
 		TransactionContext transactionContext = null;
 
 		for (Object arg : args) {
 			if (arg != null && org.mengyun.tcctransaction.api.TransactionContext.class.isAssignableFrom(arg.getClass())) {
-
 				transactionContext = (org.mengyun.tcctransaction.api.TransactionContext) arg;
 			}
 		}

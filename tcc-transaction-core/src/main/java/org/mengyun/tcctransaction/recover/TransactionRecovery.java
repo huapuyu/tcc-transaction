@@ -11,9 +11,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Created by changmingxie on 11/10/15.
- */
 public class TransactionRecovery {
 
     private int maxRetryCount = 3;

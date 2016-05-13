@@ -1,6 +1,5 @@
 package org.mengyun.tcctransaction.repository;
 
-
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.mengyun.tcctransaction.Transaction;
@@ -12,122 +11,116 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Created by changmingxie on 10/30/15.
- */
 public abstract class CachableTransactionRepository implements TransactionRepository {
 
-    private int expireDurationInSeconds = 300;
+	private int expireDurationInSeconds = 300;
+	private int errorExpireDurationInSeconds = 300;
+	private Cache<Xid, Transaction> transactionXidCompensableTransactionCache;
+	private Cache<Xid, Transaction> errorTransactionXidCompensableTransactionCache;
 
-    private int errorExpireDurationInSeconds = 300;
+	@Override
+	public void create(Transaction transaction) {
+		doCreate(transaction);
+		putToCache(transaction);
+	}
 
-    private Cache<Xid, Transaction> transactionXidCompensableTransactionCache;
+	@Override
+	public void update(Transaction transaction) {
+		doUpdate(transaction);
+		putToCache(transaction);
+	}
 
-    private Cache<Xid, Transaction> errorTransactionXidCompensableTransactionCache;
+	@Override
+	public void delete(Transaction transaction) {
+		doDelete(transaction);
+		removeFromCache(transaction);
+	}
 
-    @Override
-    public void create(Transaction transaction) {
-        doCreate(transaction);
-        putToCache(transaction);
-    }
+	@Override
+	public Transaction findByXid(TransactionXid transactionXid) {
+		Transaction transaction = findFromCache(transactionXid);
 
-    @Override
-    public void update(Transaction transaction) {
-        doUpdate(transaction);
-        putToCache(transaction);
-    }
+		if (transaction == null) {
+			transaction = doFindOne(transactionXid);
 
-    @Override
-    public void delete(Transaction transaction) {
-        doDelete(transaction);
-        removeFromCache(transaction);
-    }
+			if (transaction != null) {
+				putToCache(transaction);
+			}
+		}
 
-    @Override
-    public Transaction findByXid(TransactionXid transactionXid) {
-        Transaction transaction = findFromCache(transactionXid);
+		return transaction;
+	}
 
-        if (transaction == null) {
-            transaction = doFindOne(transactionXid);
+	@Override
+	public List<Transaction> findAll() {
 
-            if (transaction != null) {
-                putToCache(transaction);
-            }
-        }
+		List<Transaction> transactions = doFindAll();
+		for (Transaction transaction : transactions) {
+			putToCache(transaction);
+		}
 
-        return transaction;
-    }
+		return transactions;
+	}
 
-    @Override
-    public List<Transaction> findAll() {
+	@Override
+	public void addErrorTransaction(Transaction transaction) {
+		putToErrorCache(transaction);
+	}
 
-        List<Transaction> transactions = doFindAll();
-        for (Transaction transaction : transactions) {
-            putToCache(transaction);
-        }
+	@Override
+	public void removeErrorTransaction(Transaction transaction) {
+		removeFromErrorCache(transaction);
+	}
 
-        return transactions;
-    }
+	@Override
+	public Collection<Transaction> findAllErrorTransactions() {
+		return findAllFromErrorCache();
+	}
 
-    @Override
-    public void addErrorTransaction(Transaction transaction) {
-        putToErrorCache(transaction);
-    }
+	public CachableTransactionRepository() {
+		transactionXidCompensableTransactionCache = CacheBuilder.newBuilder().expireAfterAccess(expireDurationInSeconds, TimeUnit.SECONDS).maximumSize(1000).build();
+		errorTransactionXidCompensableTransactionCache = CacheBuilder.newBuilder().expireAfterAccess(errorExpireDurationInSeconds, TimeUnit.SECONDS).maximumSize(1000).build();
+	}
 
-    @Override
-    public void removeErrorTransaction(Transaction transaction) {
-        removeFromErrorCache(transaction);
-    }
+	protected void putToCache(Transaction transaction) {
+		transactionXidCompensableTransactionCache.put(transaction.getXid(), transaction);
+	}
 
-    @Override
-    public Collection<Transaction> findAllErrorTransactions() {
-        return findAllFromErrorCache();
-    }
+	protected void removeFromCache(Transaction transaction) {
+		transactionXidCompensableTransactionCache.invalidate(transaction.getXid());
+	}
 
-    public CachableTransactionRepository() {
-        transactionXidCompensableTransactionCache = CacheBuilder.newBuilder().expireAfterAccess(expireDurationInSeconds, TimeUnit.SECONDS).maximumSize(1000).build();
-        errorTransactionXidCompensableTransactionCache = CacheBuilder.newBuilder().expireAfterAccess(errorExpireDurationInSeconds, TimeUnit.SECONDS).maximumSize(1000).build();
-    }
+	protected Transaction findFromCache(TransactionXid transactionXid) {
+		return transactionXidCompensableTransactionCache.getIfPresent(transactionXid);
+	}
 
-    protected void putToCache(Transaction transaction) {
-        transactionXidCompensableTransactionCache.put(transaction.getXid(), transaction);
-    }
+	protected void putToErrorCache(Transaction transaction) {
+		errorTransactionXidCompensableTransactionCache.put(transaction.getXid(), transaction);
+	}
 
-    protected void removeFromCache(Transaction transaction) {
-        transactionXidCompensableTransactionCache.invalidate(transaction.getXid());
-    }
+	protected void removeFromErrorCache(Transaction transaction) {
+		errorTransactionXidCompensableTransactionCache.invalidate(transaction.getXid());
+	}
 
-    protected Transaction findFromCache(TransactionXid transactionXid) {
-        return transactionXidCompensableTransactionCache.getIfPresent(transactionXid);
-    }
+	protected Collection<Transaction> findAllFromErrorCache() {
+		return errorTransactionXidCompensableTransactionCache.asMap().values();
+	}
 
-    protected void putToErrorCache(Transaction transaction) {
-        errorTransactionXidCompensableTransactionCache.put(transaction.getXid(), transaction);
-    }
+	public final void setExpireDurationInSeconds(int durationInSeconds) {
+		this.expireDurationInSeconds = durationInSeconds;
+	}
 
-    protected void removeFromErrorCache(Transaction transaction) {
-        errorTransactionXidCompensableTransactionCache.invalidate(transaction.getXid());
-    }
+	public final void setErrorExpireDurationInSeconds(int durationInSeconds) {
+		this.errorExpireDurationInSeconds = durationInSeconds;
+	}
 
-    protected Collection<Transaction> findAllFromErrorCache() {
-        return errorTransactionXidCompensableTransactionCache.asMap().values();
-    }
+	protected abstract void doCreate(Transaction transaction);
 
-    public final void setExpireDurationInSeconds(int durationInSeconds) {
-        this.expireDurationInSeconds = durationInSeconds;
-    }
+	protected abstract void doUpdate(Transaction transaction);
 
-    public final void setErrorExpireDurationInSeconds(int durationInSeconds) {
-        this.errorExpireDurationInSeconds = durationInSeconds;
-    }
+	protected abstract void doDelete(Transaction transaction);
 
-    protected abstract void doCreate(Transaction transaction);
+	protected abstract Transaction doFindOne(Xid xid);
 
-    protected abstract void doUpdate(Transaction transaction);
-
-    protected abstract void doDelete(Transaction transaction);
-
-    protected abstract Transaction doFindOne(Xid xid);
-
-    protected abstract List<Transaction> doFindAll();
+	protected abstract List<Transaction> doFindAll();
 }
