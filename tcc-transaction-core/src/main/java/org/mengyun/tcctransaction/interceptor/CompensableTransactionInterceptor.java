@@ -60,11 +60,11 @@ public class CompensableTransactionInterceptor {
 		try {
 			transactionConfigurator.getTransactionManager().commit();
 		} catch (Throwable commitException) {
-			LOGGER.error("compensable transaction commit failed.", commitException);
+			LOGGER.error("compensable transaction commit failed", commitException);
 			try {
 				transactionConfigurator.getTransactionManager().rollback();
 			} catch (Throwable rollbackException) {
-				LOGGER.error("compensable transaction rollback failed.", rollbackException);
+				LOGGER.error("compensable transaction rollback failed", rollbackException);
 				// throw rollbackException;
 			}
 			throw commitException;
@@ -72,7 +72,6 @@ public class CompensableTransactionInterceptor {
 	}
 
 	private void providerMethodProceed(ProceedingJoinPoint pjp, TransactionContext transactionContext) throws Throwable {
-
 		switch (TransactionStatus.valueOf(transactionContext.getStatus())) {
 		case TRYING:
 			transactionConfigurator.getTransactionManager().propagationNewBegin(transactionContext);
@@ -96,5 +95,4 @@ public class CompensableTransactionInterceptor {
 			break;
 		}
 	}
-
 }

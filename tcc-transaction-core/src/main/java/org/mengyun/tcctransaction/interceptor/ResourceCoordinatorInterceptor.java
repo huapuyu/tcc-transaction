@@ -23,170 +23,150 @@ import org.mengyun.tcctransaction.utils.ReflectionUtils;
  */
 public class ResourceCoordinatorInterceptor {
 
-    private TransactionConfigurator transactionConfigurator;
+	private TransactionConfigurator transactionConfigurator;
 
-    public void setTransactionConfigurator(TransactionConfigurator transactionConfigurator) {
-        this.transactionConfigurator = transactionConfigurator;
-    }
+	public void setTransactionConfigurator(TransactionConfigurator transactionConfigurator) {
+		this.transactionConfigurator = transactionConfigurator;
+	}
 
-    public void interceptTransactionContextMethod(ProceedingJoinPoint pjp) throws Throwable {
+	public void interceptTransactionContextMethod(ProceedingJoinPoint pjp) throws Throwable {
+		Transaction transaction = transactionConfigurator.getTransactionManager().getCurrentTransaction();
 
-        Transaction transaction = transactionConfigurator.getTransactionManager().getCurrentTransaction();
+		if (transaction != null && transaction.getStatus().equals(TransactionStatus.TRYING)) {
+			TransactionContext transactionContext = CompensableMethodUtils.getTransactionContextFromArgs(pjp.getArgs());
 
-        if (transaction != null && transaction.getStatus().equals(TransactionStatus.TRYING)) {
+			Compensable compensable = getCompensable(pjp);
 
-            TransactionContext transactionContext = CompensableMethodUtils.getTransactionContextFromArgs(pjp.getArgs());
+			MethodType methodType = CompensableMethodUtils.calculateMethodType(transactionContext, compensable != null ? true : false);
 
-            Compensable compensable = getCompensable(pjp);
+			switch (methodType) {
+			case ROOT:
+				generateAndEnlistRootParticipant(pjp);
+				break;
+			case CONSUMER:
+				generateAndEnlistConsumerParticipant(pjp);
+				break;
+			case PROVIDER:
+				generateAndEnlistProviderParticipant(pjp);
+				break;
+			default:
+				// TODO Anders 是否要做些normal判断，比如抛出异常
+				break;
+			}
+		}
 
-            MethodType methodType = CompensableMethodUtils.calculateMethodType(transactionContext, compensable != null ? true : false);
+		pjp.proceed(pjp.getArgs());
+	}
 
-            switch (methodType) {
-                case ROOT:
-                    generateAndEnlistRootParticipant(pjp);
-                    break;
-                case CONSUMER:
-                    generateAndEnlistConsumerParticipant(pjp);
-                    break;
-                case PROVIDER:
-                    generateAndEnlistProviderParticipant(pjp);
-                    break;
-            }
-        }
+	private Participant generateAndEnlistRootParticipant(ProceedingJoinPoint pjp) {
+		MethodSignature signature = (MethodSignature) pjp.getSignature();
+		Method method = signature.getMethod();
+		Compensable compensable = getCompensable(pjp);
+		String confirmMethodName = compensable.confirmMethod();
+		String cancelMethodName = compensable.cancelMethod();
 
-        pjp.proceed(pjp.getArgs());
-    }
+		Transaction transaction = transactionConfigurator.getTransactionManager().getCurrentTransaction();
 
-    private Participant generateAndEnlistRootParticipant(ProceedingJoinPoint pjp) {
+		TransactionXid xid = new TransactionXid(transaction.getXid().getGlobalTransactionId());
 
-        MethodSignature signature = (MethodSignature) pjp.getSignature();
-        Method method = signature.getMethod();
-        Compensable compensable = getCompensable(pjp);
-        String confirmMethodName = compensable.confirmMethod();
-        String cancelMethodName = compensable.cancelMethod();
+		Class<?> targetClass = ReflectionUtils.getDeclaringType(pjp.getTarget().getClass(), method.getName(), method.getParameterTypes());
 
-        Transaction transaction = transactionConfigurator.getTransactionManager().getCurrentTransaction();
+		InvocationContext confirmInvocation = new InvocationContext(targetClass, confirmMethodName, method.getParameterTypes(), pjp.getArgs());
+		InvocationContext cancelInvocation = new InvocationContext(targetClass, cancelMethodName, method.getParameterTypes(), pjp.getArgs());
 
-        TransactionXid xid = new TransactionXid(transaction.getXid().getGlobalTransactionId());
+		Participant participant = new Participant(xid, new Terminator(confirmInvocation, cancelInvocation));
 
-        Class targetClass = ReflectionUtils.getDeclaringType(pjp.getTarget().getClass(), method.getName(), method.getParameterTypes());
+		transaction.enlistParticipant(participant);
 
-        InvocationContext confirmInvocation = new InvocationContext(targetClass,
-                confirmMethodName,
-                method.getParameterTypes(), pjp.getArgs());
-        InvocationContext cancelInvocation = new InvocationContext(targetClass,
-                cancelMethodName,
-                method.getParameterTypes(), pjp.getArgs());
+		TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
+		transactionRepository.update(transaction);
 
-        Participant participant =
-                new Participant(
-                        xid,
-                        new Terminator(confirmInvocation, cancelInvocation));
+		return participant;
+	}
 
-        transaction.enlistParticipant(participant);
+	private Participant generateAndEnlistConsumerParticipant(ProceedingJoinPoint pjp) {
+		MethodSignature signature = (MethodSignature) pjp.getSignature();
+		Method method = signature.getMethod();
 
-        TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
-        transactionRepository.update(transaction);
+		Transaction transaction = transactionConfigurator.getTransactionManager().getCurrentTransaction();
 
-        return participant;
-    }
+		TransactionXid xid = new TransactionXid(transaction.getXid().getGlobalTransactionId());
 
-    private Participant generateAndEnlistConsumerParticipant(ProceedingJoinPoint pjp) {
+		int position = CompensableMethodUtils.getTransactionContextParamPosition(((MethodSignature) pjp.getSignature()).getParameterTypes());
 
-        MethodSignature signature = (MethodSignature) pjp.getSignature();
-        Method method = signature.getMethod();
+		pjp.getArgs()[position] = new TransactionContext(xid, transaction.getStatus().getId());
 
-        Transaction transaction = transactionConfigurator.getTransactionManager().getCurrentTransaction();
+		Object[] tryArgs = pjp.getArgs();
+		Object[] confirmArgs = new Object[tryArgs.length];
+		Object[] cancelArgs = new Object[tryArgs.length];
 
-        TransactionXid xid = new TransactionXid(transaction.getXid().getGlobalTransactionId());
+		System.arraycopy(tryArgs, 0, confirmArgs, 0, tryArgs.length);
+		confirmArgs[position] = new TransactionContext(xid, TransactionStatus.CONFIRMING.getId());
 
-        int position = CompensableMethodUtils.getTransactionContextParamPosition(((MethodSignature) pjp.getSignature()).getParameterTypes());
+		System.arraycopy(tryArgs, 0, cancelArgs, 0, tryArgs.length);
+		cancelArgs[position] = new TransactionContext(xid, TransactionStatus.CANCELLING.getId());
 
-        pjp.getArgs()[position] = new TransactionContext(xid, transaction.getStatus().getId());
+		Class<?> targetClass = ReflectionUtils.getDeclaringType(pjp.getTarget().getClass(), method.getName(), method.getParameterTypes());
 
-        Object[] tryArgs = pjp.getArgs();
-        Object[] confirmArgs = new Object[tryArgs.length];
-        Object[] cancelArgs = new Object[tryArgs.length];
+		InvocationContext confirmInvocation = new InvocationContext(targetClass, method.getName(), method.getParameterTypes(), confirmArgs);
+		InvocationContext cancelInvocation = new InvocationContext(targetClass, method.getName(), method.getParameterTypes(), cancelArgs);
 
-        System.arraycopy(tryArgs, 0, confirmArgs, 0, tryArgs.length);
-        confirmArgs[position] = new TransactionContext(xid, TransactionStatus.CONFIRMING.getId());
+		Participant participant = new Participant(xid, new Terminator(confirmInvocation, cancelInvocation));
 
-        System.arraycopy(tryArgs, 0, cancelArgs, 0, tryArgs.length);
-        cancelArgs[position] = new TransactionContext(xid, TransactionStatus.CANCELLING.getId());
+		transaction.enlistParticipant(participant);
 
-        Class targetClass = ReflectionUtils.getDeclaringType(pjp.getTarget().getClass(), method.getName(), method.getParameterTypes());
+		TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
+		transactionRepository.update(transaction);
 
-        InvocationContext confirmInvocation = new InvocationContext(targetClass, method.getName(), method.getParameterTypes(), confirmArgs);
-        InvocationContext cancelInvocation = new InvocationContext(targetClass, method.getName(), method.getParameterTypes(), cancelArgs);
+		return participant;
+	}
 
-        Participant participant =
-                new Participant(
-                        xid,
-                        new Terminator(confirmInvocation, cancelInvocation));
+	private Participant generateAndEnlistProviderParticipant(ProceedingJoinPoint pjp) {
+		MethodSignature signature = (MethodSignature) pjp.getSignature();
+		Method method = signature.getMethod();
 
-        transaction.enlistParticipant(participant);
+		Compensable compensable = getCompensable(pjp);
 
-        TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
-        transactionRepository.update(transaction);
+		String confirmMethodName = compensable.confirmMethod();
+		String cancelMethodName = compensable.cancelMethod();
 
-        return participant;
-    }
+		Transaction transaction = transactionConfigurator.getTransactionManager().getCurrentTransaction();
 
-    private Participant generateAndEnlistProviderParticipant(ProceedingJoinPoint pjp) {
+		TransactionXid xid = new TransactionXid(transaction.getXid().getGlobalTransactionId());
 
-        MethodSignature signature = (MethodSignature) pjp.getSignature();
-        Method method = signature.getMethod();
+		Class<?> targetClass = ReflectionUtils.getDeclaringType(pjp.getTarget().getClass(), method.getName(), method.getParameterTypes());
 
-        Compensable compensable = getCompensable(pjp);
+		InvocationContext confirmInvocation = new InvocationContext(targetClass, confirmMethodName, method.getParameterTypes(), pjp.getArgs());
+		InvocationContext cancelInvocation = new InvocationContext(targetClass, cancelMethodName, method.getParameterTypes(), pjp.getArgs());
 
-        String confirmMethodName = compensable.confirmMethod();
-        String cancelMethodName = compensable.cancelMethod();
+		Participant participant = new Participant(xid, new Terminator(confirmInvocation, cancelInvocation));
 
-        Transaction transaction = transactionConfigurator.getTransactionManager().getCurrentTransaction();
+		transaction.enlistParticipant(participant);
 
-        TransactionXid xid = new TransactionXid(transaction.getXid().getGlobalTransactionId());
+		TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
+		transactionRepository.update(transaction);
 
+		return participant;
+	}
 
-        Class targetClass = ReflectionUtils.getDeclaringType(pjp.getTarget().getClass(), method.getName(), method.getParameterTypes());
+	private Compensable getCompensable(ProceedingJoinPoint pjp) {
+		MethodSignature signature = (MethodSignature) pjp.getSignature();
+		Method method = signature.getMethod();
 
-        InvocationContext confirmInvocation = new InvocationContext(targetClass, confirmMethodName,
-                method.getParameterTypes(), pjp.getArgs());
-        InvocationContext cancelInvocation = new InvocationContext(targetClass, cancelMethodName,
-                method.getParameterTypes(), pjp.getArgs());
+		Compensable compensable = method.getAnnotation(Compensable.class);
 
-        Participant participant =
-                new Participant(
-                        xid,
-                        new Terminator(confirmInvocation, cancelInvocation));
+		if (compensable == null) {
+			Method targetMethod = null;
+			try {
+				targetMethod = pjp.getTarget().getClass().getMethod(method.getName(), method.getParameterTypes());
+				if (targetMethod != null) {
+					compensable = targetMethod.getAnnotation(Compensable.class);
+				}
+			} catch (NoSuchMethodException e) {
+				compensable = null;
+			}
 
-        transaction.enlistParticipant(participant);
-
-        TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
-        transactionRepository.update(transaction);
-
-        return participant;
-    }
-
-    private Compensable getCompensable(ProceedingJoinPoint pjp) {
-        MethodSignature signature = (MethodSignature) pjp.getSignature();
-        Method method = signature.getMethod();
-
-        Compensable compensable = method.getAnnotation(Compensable.class);
-
-        if (compensable == null) {
-            Method targetMethod = null;
-            try {
-                targetMethod = pjp.getTarget().getClass().getMethod(method.getName(), method.getParameterTypes());
-
-                if (targetMethod != null) {
-                    compensable = targetMethod.getAnnotation(Compensable.class);
-                }
-
-            } catch (NoSuchMethodException e) {
-                compensable = null;
-            }
-
-        }
-        return compensable;
-    }
+		}
+		return compensable;
+	}
 }
