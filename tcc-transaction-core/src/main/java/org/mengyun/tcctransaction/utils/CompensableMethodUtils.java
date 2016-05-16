@@ -21,7 +21,6 @@ public class CompensableMethodUtils {
 	}
 
 	public static int getTransactionContextParamPosition(Class<?>[] parameterTypes) {
-
 		int i = -1;
 
 		for (i = 0; i < parameterTypes.length; i++) {

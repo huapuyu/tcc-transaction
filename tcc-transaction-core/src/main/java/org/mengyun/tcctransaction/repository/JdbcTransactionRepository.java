@@ -155,11 +155,11 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 			ResultSet resultSet = stmt.executeQuery();
 
 			while (resultSet.next()) {
-				byte[] globalTxid = resultSet.getBytes(1);
-				byte[] branchQualifier = resultSet.getBytes(2);
+				// byte[] globalTxid = resultSet.getBytes(1);
+				// byte[] branchQualifier = resultSet.getBytes(2);
 				byte[] transactionBytes = resultSet.getBytes(3);
-				int status = resultSet.getInt(4);
-				int transactionType = resultSet.getInt(5);
+				// int status = resultSet.getInt(4);
+				// int transactionType = resultSet.getInt(5);
 				int retriedCount = resultSet.getInt(6);
 
 				Transaction transaction = (Transaction) SerializationUtils.deserialize(transactionBytes);
