@@ -58,12 +58,12 @@ public class CompensableTransactionInterceptor {
 			transactionConfigurator.getTransactionManager().commit();
 		} catch (Throwable commitException) {
 			LOGGER.error("compensable transaction commit failed", commitException);
-			try {
-				transactionConfigurator.getTransactionManager().rollback();
-			} catch (Throwable rollbackException) {
-				LOGGER.error("compensable transaction rollback failed", rollbackException);
-				// throw rollbackException;
-			}
+			// try {
+			// transactionConfigurator.getTransactionManager().rollback();
+			// } catch (Throwable rollbackException) {
+			// LOGGER.error("compensable transaction rollback failed", rollbackException);
+			// throw rollbackException;
+			// }
 			throw commitException;
 		}
 	}
