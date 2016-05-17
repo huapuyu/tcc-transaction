@@ -13,80 +13,75 @@ import java.util.List;
 
 public class TransactionRecovery {
 
-    private int maxRetryCount = 3;
+	private static final Logger logger = Logger.getLogger(TransactionRecovery.class);
 
-    static final Logger logger = Logger.getLogger(TransactionRecovery.class.getSimpleName());
+	private int maxRetryCount = 3;
 
-    private TransactionConfigurator transactionConfigurator;
+	private TransactionConfigurator transactionConfigurator;
 
-    private volatile boolean initialized = false;
+	private volatile boolean initialized = false;
 
-    public void startRecover() {
+	public void startRecover() {
+		this.fireInitializationIfNecessary();
 
-        this.fireInitializationIfNecessary();
+		Collection<Transaction> transactions = transactionConfigurator.getTransactionRepository().findAllErrorTransactions();
 
-        Collection<Transaction> transactions = transactionConfigurator.getTransactionRepository().findAllErrorTransactions();
+		List<Transaction> rollbackTransactions = new ArrayList<Transaction>(transactions);
 
-        List<Transaction> rollbackTransactions = new ArrayList<Transaction>(transactions);
+		for (Transaction transaction : rollbackTransactions) {
+			if (transaction.getRetriedCount() > maxRetryCount) {
+				transactionConfigurator.getTransactionRepository().removeErrorTransaction(transaction);
+				continue;
+			}
 
-        for (Transaction transaction : rollbackTransactions) {
+			try {
+				transaction.addRetriedCount();
 
-            if (transaction.getRetriedCount() > maxRetryCount) {
+				if (transaction.getStatus().equals(TransactionStatus.CONFIRMING)) {
+					transaction.changeStatus(TransactionStatus.CONFIRMING);
+					transactionConfigurator.getTransactionRepository().update(transaction);
+					transaction.commit();
 
-                transactionConfigurator.getTransactionRepository().removeErrorTransaction(transaction);
-                continue;
-            }
+				} else {
+					transaction.changeStatus(TransactionStatus.CANCELLING);
+					transactionConfigurator.getTransactionRepository().update(transaction);
+					transaction.rollback();
+				}
 
-            try {
-                transaction.addRetriedCount();
+				transactionConfigurator.getTransactionRepository().delete(transaction);
+				transactionConfigurator.getTransactionRepository().removeErrorTransaction(transaction);
+			} catch (Throwable e) {
+				logger.error(String.format("recover failed, txid:%s, status:%s,retried count:%d", transaction.getXid(), transaction.getStatus().getId(), transaction.getRetriedCount()), e);
+			}
+		}
+	}
 
-                if (transaction.getStatus().equals(TransactionStatus.CONFIRMING)) {
-                    transaction.changeStatus(TransactionStatus.CONFIRMING);
-                    transactionConfigurator.getTransactionRepository().update(transaction);
-                    transaction.commit();
+	public void setTransactionConfigurator(TransactionConfigurator transactionConfigurator) {
+		this.transactionConfigurator = transactionConfigurator;
+	}
 
-                } else {
-                    transaction.changeStatus(TransactionStatus.CANCELLING);
-                    transactionConfigurator.getTransactionRepository().update(transaction);
-                    transaction.rollback();
-                }
+	private void fireInitializationIfNecessary() {
+		if (this.initialized == false) {
+			this.processStartupRecover();
+			this.initialized = true;
+		}
+	}
 
-                transactionConfigurator.getTransactionRepository().delete(transaction);
-                transactionConfigurator.getTransactionRepository().removeErrorTransaction(transaction);
-            } catch (Throwable e) {
-                logger.error(String.format("recover failed, txid:%s, status:%s,retried count:%d", transaction.getXid(), transaction.getStatus().getId(), transaction.getRetriedCount()), e);
-            }
-        }
-    }
+	private synchronized void processStartupRecover() {
+		TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
 
-    public void setTransactionConfigurator(TransactionConfigurator transactionConfigurator) {
-        this.transactionConfigurator = transactionConfigurator;
-    }
+		List<Transaction> transactions = transactionRepository.findAll();
 
-    private void fireInitializationIfNecessary() {
-        if (this.initialized == false) {
-            this.processStartupRecover();
-            this.initialized = true;
-        }
-    }
+		for (int i = 0; i < transactions.size(); i++) {
+			Transaction transaction = transactions.get(i);
 
-    private synchronized void processStartupRecover() {
+			if (transaction.getTransactionType().equals(TransactionType.ROOT)) {
+				transactionConfigurator.getTransactionRepository().addErrorTransaction(transaction);
+			}
+		}
+	}
 
-        TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
-
-        List<Transaction> transactions = transactionRepository.findAll();
-
-        for (int i = 0; i < transactions.size(); i++) {
-
-            Transaction transaction = transactions.get(i);
-
-            if (transaction.getTransactionType().equals(TransactionType.ROOT)) {
-                transactionConfigurator.getTransactionRepository().addErrorTransaction(transaction);
-            }
-        }
-    }
-
-    public void setMaxRetryCount(int maxRetryCount) {
-        this.maxRetryCount = maxRetryCount;
-    }
+	public void setMaxRetryCount(int maxRetryCount) {
+		this.maxRetryCount = maxRetryCount;
+	}
 }

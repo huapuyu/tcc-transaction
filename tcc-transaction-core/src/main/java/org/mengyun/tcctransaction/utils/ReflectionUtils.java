@@ -2,38 +2,29 @@ package org.mengyun.tcctransaction.utils;
 
 import java.lang.reflect.Method;
 
-/**
- * Created by changmingxie on 11/22/15.
- */
 public class ReflectionUtils {
 
-    public static Class getDeclaringType(Class aClass, String methodName, Class<?>[] parameterTypes) {
+	public static Class<?> getDeclaringType(Class<?> clazz, String methodName, Class<?>[] parameterTypes) {
+		Method method = null;
+		Class<?> findClass = clazz;
 
-        Method method = null;
+		do {
+			Class<?>[] clazzes = findClass.getInterfaces();
 
+			for (Class<?> c : clazzes) {
+				try {
+					method = c.getDeclaredMethod(methodName, parameterTypes);
+				} catch (NoSuchMethodException e) {
+					method = null;
+				}
 
-        Class findClass = aClass;
+				if (method != null) {
+					return c;
+				}
+			}
+			findClass = findClass.getSuperclass();
+		} while (!findClass.equals(Object.class));
 
-        do {
-            Class[] clazzes = findClass.getInterfaces();
-
-            for (Class clazz : clazzes) {
-
-                try {
-                    method = clazz.getDeclaredMethod(methodName, parameterTypes);
-                } catch (NoSuchMethodException e) {
-                    method = null;
-                }
-
-                if (method != null) {
-                    return clazz;
-                }
-            }
-
-            findClass = findClass.getSuperclass();
-
-        } while (!findClass.equals(Object.class));
-
-        return aClass;
-    }
+		return clazz;
+	}
 }

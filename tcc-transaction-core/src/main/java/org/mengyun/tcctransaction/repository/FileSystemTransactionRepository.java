@@ -13,153 +13,148 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by changming.xie on 2/24/16.
- */
 public class FileSystemTransactionRepository extends CachableTransactionRepository {
 
-    private String rootPath = "/tcc";
+	private String rootPath = "/tcc";
 
-    private volatile boolean initialized;
+	private volatile boolean initialized;
 
-    public void setRootPath(String rootPath) {
-        this.rootPath = rootPath;
-    }
+	public void setRootPath(String rootPath) {
+		this.rootPath = rootPath;
+	}
 
-    @Override
-    protected void doCreate(Transaction transaction) {
+	@Override
+	protected void doCreate(Transaction transaction) {
+		writeFile(transaction);
+	}
 
-        writeFile(transaction);
-    }
+	@Override
+	protected void doUpdate(Transaction transaction) {
+		writeFile(transaction);
+	}
 
-    @Override
-    protected void doUpdate(Transaction transaction) {
-        writeFile(transaction);
-    }
+	@Override
+	protected void doDelete(Transaction transaction) {
+		String fullFileName = getFullFileName(transaction.getXid());
+		File file = new File(fullFileName);
+		if (file.exists()) {
+			file.delete();
+		}
+	}
 
-    @Override
-    protected void doDelete(Transaction transaction) {
+	@Override
+	protected Transaction doFindOne(Xid xid) {
+		String fullFileName = getFullFileName(xid);
+		File file = new File(fullFileName);
 
-        String fullFileName = getFullFileName(transaction.getXid());
-        File file = new File(fullFileName);
-        if (file.exists()) {
-            file.delete();
-        }
-    }
+		if (file.exists()) {
+			return readTransaction(file);
+		}
 
-    @Override
-    protected Transaction doFindOne(Xid xid) {
+		return null;
+	}
 
-        String fullFileName = getFullFileName(xid);
-        File file = new File(fullFileName);
+	@Override
+	protected List<Transaction> doFindAll() {
+		List<Transaction> transactions = new ArrayList<Transaction>();
+		File path = new File(rootPath);
+		File[] files = path.listFiles();
 
-        if (file.exists()) {
-            return readTransaction(file);
-        }
+		for (File file : files) {
+			Transaction transaction = readTransaction(file);
+			transactions.add(transaction);
+		}
 
-        return null;
-    }
+		return transactions;
+	}
 
-    @Override
-    protected List<Transaction> doFindAll() {
+	private String getFullFileName(Xid xid) {
+		return String.format("%s/%s", rootPath, xid);
+	}
 
-        List<Transaction> transactions = new ArrayList<Transaction>();
-        File path = new File(rootPath);
-        File[] files = path.listFiles();
+	private void makeDirIfNecessory() {
+		if (!initialized) {
+			synchronized (FileSystemTransactionRepository.class) {
+				if (!initialized) {
+					File rootPathFile = new File(rootPath);
+					if (!rootPathFile.exists()) {
+						boolean result = rootPathFile.mkdir();
 
-        for (File file : files) {
-            Transaction transaction = readTransaction(file);
-            transactions.add(transaction);
-        }
+						if (!result) {
+							throw new TransactionIOException("cannot create root path, the path to create is:" + rootPath);
+						}
 
-        return transactions;
-    }
+						initialized = true;
+					} else if (!rootPathFile.isDirectory()) {
+						throw new TransactionIOException("rootPath is not directory");
+					}
+				}
+			}
+		}
+	}
 
-    private String getFullFileName(Xid xid) {
-        return String.format("%s/%s", rootPath, xid);
-    }
+	private void writeFile(Transaction transaction) {
+		makeDirIfNecessory();
 
-    private void makeDirIfNecessory() {
-        if (!initialized) {
-            synchronized (FileSystemTransactionRepository.class) {
-                if (!initialized) {
-                    File rootPathFile = new File(rootPath);
-                    if (!rootPathFile.exists()) {
+		String file = getFullFileName(transaction.getXid());
 
-                        boolean result = rootPathFile.mkdir();
+		FileChannel channel = null;
+		RandomAccessFile raf = null;
 
-                        if (!result) {
-                            throw new TransactionIOException("cannot create root path, the path to create is:" + rootPath);
-                        }
+		byte[] content = SerializationUtils.serialize(transaction);
+		try {
+			raf = new RandomAccessFile(file, "rw");
+			channel = raf.getChannel();
+			ByteBuffer buffer = ByteBuffer.allocate(content.length);
+			buffer.put(content);
+			buffer.flip();
 
-                        initialized = true;
-                    } else if (!rootPathFile.isDirectory()) {
-                        throw new TransactionIOException("rootPath is not directory");
-                    }
-                }
-            }
-        }
-    }
+			while (buffer.hasRemaining()) {
+				channel.write(buffer);
+			}
 
-    private void writeFile(Transaction transaction) {
-        makeDirIfNecessory();
+			channel.force(true);
+		} catch (Exception e) {
+			throw new TransactionIOException(e);
+		} finally {
+			if (channel != null && channel.isOpen()) {
+				try {
+					channel.close();
+				} catch (IOException e) {
+					throw new TransactionIOException(e);
+				}
+			}
+			if (raf != null) {
+				try {
+					raf.close();
+				} catch (IOException e) {
+					throw new TransactionIOException(e);
+				}
+			}
+		}
+	}
 
-        String file = getFullFileName(transaction.getXid());
+	private Transaction readTransaction(File file) {
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(file);
+			byte[] content = new byte[(int) file.length()];
+			fis.read(content);
 
-        FileChannel channel = null;
-        RandomAccessFile raf = null;
-
-        byte[] content = SerializationUtils.serialize(transaction);
-        try {
-            raf = new RandomAccessFile(file, "rw");
-            channel = raf.getChannel();
-            ByteBuffer buffer = ByteBuffer.allocate(content.length);
-            buffer.put(content);
-            buffer.flip();
-
-            while (buffer.hasRemaining()) {
-                channel.write(buffer);
-            }
-
-            channel.force(true);
-        } catch (Exception e) {
-            throw new TransactionIOException(e);
-        } finally {
-            if (channel != null && channel.isOpen()) {
-                try {
-                    channel.close();
-                } catch (IOException e) {
-                    throw new TransactionIOException(e);
-                }
-            }
-        }
-    }
-
-    private Transaction readTransaction(File file) {
-
-        FileInputStream fis = null;
-        try {
-            fis = new FileInputStream(file);
-
-            byte[] content = new byte[(int) file.length()];
-
-            fis.read(content);
-
-            if (content != null) {
-                return (Transaction) SerializationUtils.deserialize(content);
-            }
-        } catch (Exception e) {
-            throw new TransactionIOException(e);
-        } finally {
-            if (fis != null) {
-                try {
-                    fis.close();
-                } catch (IOException e) {
-                    throw new TransactionIOException(e);
-                }
-            }
-        }
-
-        return null;
-    }
+			if (content != null) {
+				return (Transaction) SerializationUtils.deserialize(content);
+			}
+		} catch (Exception e) {
+			throw new TransactionIOException(e);
+		} finally {
+			if (fis != null) {
+				try {
+					fis.close();
+				} catch (IOException e) {
+					throw new TransactionIOException(e);
+				}
+			}
+		}
+		return null;
+	}
 }

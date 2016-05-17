@@ -31,19 +31,17 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 			connection = this.getConnection();
 
 			StringBuilder builder = new StringBuilder();
-			builder.append("INSERT INTO TCC_TRANSACTION " + "(GLOBAL_TX_ID,BRANCH_QUALIFIER,TRANSACTION_TYPE,CONTENT,STATUS,RETRIED_COUNT)" + "VALUES(?,?,?,?,?,0)");
+			builder.append("INSERT INTO TCC_TRANSACTION (GLOBAL_TX_ID,BRANCH_QUALIFIER,TRANSACTION_TYPE,CONTENT,STATUS,RETRIED_COUNT) VALUES (?,?,?,?,?,0)");
 
 			stmt = connection.prepareStatement(builder.toString());
 
 			stmt.setBytes(1, transaction.getXid().getGlobalTransactionId());
 			stmt.setBytes(2, transaction.getXid().getBranchQualifier());
-
 			stmt.setInt(3, transaction.getTransactionType().getId());
 			stmt.setBytes(4, SerializationUtils.serialize(transaction));
 			stmt.setInt(5, transaction.getStatus().getId());
 
 			stmt.executeUpdate();
-
 		} catch (SQLException e) {
 			throw new TransactionIOException(e);
 		} finally {
@@ -60,7 +58,7 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 			connection = this.getConnection();
 
 			StringBuilder builder = new StringBuilder();
-			builder.append("UPDATE TCC_TRANSACTION SET " + "CONTENT = ?,STATUS = ?,RETRIED_COUNT = ? WHERE GLOBAL_TX_ID = ? AND BRANCH_QUALIFIER = ?");
+			builder.append("UPDATE TCC_TRANSACTION SET CONTENT = ?,STATUS = ?,RETRIED_COUNT = ? WHERE GLOBAL_TX_ID = ? AND BRANCH_QUALIFIER = ?");
 
 			stmt = connection.prepareStatement(builder.toString());
 
@@ -71,7 +69,6 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 			stmt.setBytes(5, transaction.getXid().getBranchQualifier());
 
 			stmt.executeUpdate();
-
 		} catch (Throwable e) {
 			throw new TransactionIOException(e);
 		} finally {
@@ -88,7 +85,7 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 			connection = this.getConnection();
 
 			StringBuilder builder = new StringBuilder();
-			builder.append("DELETE FROM TCC_TRANSACTION " + " WHERE GLOBAL_TX_ID = ? AND BRANCH_QUALIFIER = ?");
+			builder.append("DELETE FROM TCC_TRANSACTION WHERE GLOBAL_TX_ID = ? AND BRANCH_QUALIFIER = ?");
 
 			stmt = connection.prepareStatement(builder.toString());
 
@@ -96,7 +93,6 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 			stmt.setBytes(2, transaction.getXid().getBranchQualifier());
 
 			stmt.executeUpdate();
-
 		} catch (SQLException e) {
 			throw new TransactionIOException(e);
 		} finally {
@@ -106,7 +102,6 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 	}
 
 	protected Transaction doFindOne(Xid xid) {
-
 		List<Transaction> transactions = doFind(Arrays.asList(xid));
 
 		if (!CollectionUtils.isEmpty(transactions)) {
@@ -121,7 +116,6 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 	}
 
 	protected List<Transaction> doFind(List<Xid> xids) {
-
 		List<Transaction> transactions = new ArrayList<Transaction>();
 
 		Connection connection = null;
@@ -131,19 +125,18 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 			connection = this.getConnection();
 
 			StringBuilder builder = new StringBuilder();
-			builder.append("SELECT GLOBAL_TX_ID, BRANCH_QUALIFIER, CONTENT,STATUS,TRANSACTION_TYPE,RETRIED_COUNT" + "  FROM TCC_TRANSACTION ");
+			builder.append("SELECT GLOBAL_TX_ID,BRANCH_QUALIFIER,CONTENT,STATUS,TRANSACTION_TYPE,RETRIED_COUNT FROM TCC_TRANSACTION");
 
 			if (!CollectionUtils.isEmpty(xids)) {
 				builder.append(" WHERE ");
 				for (Xid xid : xids) {
-					builder.append("( GLOBAL_TX_ID = ? AND BRANCH_QUALIFIER = ? )");
+					builder.append("(GLOBAL_TX_ID = ? AND BRANCH_QUALIFIER = ?)");
 				}
 			}
 
 			stmt = connection.prepareStatement(builder.toString());
 
 			if (!CollectionUtils.isEmpty(xids)) {
-
 				int i = 0;
 
 				for (Xid xid : xids) {
@@ -155,11 +148,11 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
 			ResultSet resultSet = stmt.executeQuery();
 
 			while (resultSet.next()) {
-				byte[] globalTxid = resultSet.getBytes(1);
-				byte[] branchQualifier = resultSet.getBytes(2);
+				// byte[] globalTxid = resultSet.getBytes(1);
+				// byte[] branchQualifier = resultSet.getBytes(2);
 				byte[] transactionBytes = resultSet.getBytes(3);
-				int status = resultSet.getInt(4);
-				int transactionType = resultSet.getInt(5);
+				// int status = resultSet.getInt(4);
+				// int transactionType = resultSet.getInt(5);
 				int retriedCount = resultSet.getInt(6);
 
 				Transaction transaction = (Transaction) SerializationUtils.deserialize(transactionBytes);
