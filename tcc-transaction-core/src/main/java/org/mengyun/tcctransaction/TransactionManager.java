@@ -56,7 +56,6 @@ public class TransactionManager {
 			if (transaction.getTransactionType().equals(TransactionType.ROOT)) {
 				transactionConfigurator.getTransactionRepository().addErrorTransaction(transaction);
 			}
-			// TODO Anders 确定要封装成RuntimeException
 			throw new RuntimeException(commitException);
 		}
 	}
@@ -76,7 +75,6 @@ public class TransactionManager {
 			if (transaction.getTransactionType().equals(TransactionType.ROOT)) {
 				transactionConfigurator.getTransactionRepository().addErrorTransaction(transaction);
 			}
-			// TODO Anders 确定要封装成RuntimeException
 			throw new RuntimeException(rollbackException);
 		}
 	}
