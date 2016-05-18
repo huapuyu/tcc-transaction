@@ -29,7 +29,7 @@ public class TransactionRecovery {
 		List<Transaction> rollbackTransactions = new ArrayList<Transaction>(transactions);
 
 		for (Transaction transaction : rollbackTransactions) {
-			if (transaction.getRetriedCount() > maxRetryCount) {
+			if (transaction.getRetriedCount() >= maxRetryCount) {
 				transactionConfigurator.getTransactionRepository().removeErrorTransaction(transaction);
 				continue;
 			}
