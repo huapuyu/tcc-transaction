@@ -26,9 +26,14 @@
         <property name="sqlSessionFactory" ref="sqlSessionFactory"></property>
     </bean>
 
-    <bean id="transactionRepository"
+    <!-- <bean id="transactionRepository"
           class="org.mengyun.tcctransaction.spring.repository.SpringJdbcTransactionRepository">
         <property name="dataSource" ref="orderDataSource"/>
+    </bean> -->
+    
+    <bean id="transactionRepository"
+          class="org.mengyun.tcctransaction.repository.RedisTransactionRepository">
+        <property name="host" value="192.168.56.101"/>
     </bean>
 
 </beans>

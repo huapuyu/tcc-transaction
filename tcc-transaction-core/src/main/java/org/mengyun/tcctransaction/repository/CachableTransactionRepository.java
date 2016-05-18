@@ -53,7 +53,6 @@ public abstract class CachableTransactionRepository implements TransactionReposi
 
 	@Override
 	public List<Transaction> findAll() {
-
 		List<Transaction> transactions = doFindAll();
 		for (Transaction transaction : transactions) {
 			putToCache(transaction);
