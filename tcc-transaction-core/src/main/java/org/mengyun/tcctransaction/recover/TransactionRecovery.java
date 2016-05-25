@@ -70,6 +70,7 @@ public class TransactionRecovery {
 	private synchronized void processStartupRecover() {
 		TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
 
+		// TODO Anders 此处可以优化，没必要获取所有的transaction
 		List<Transaction> transactions = transactionRepository.findAll();
 
 		for (int i = 0; i < transactions.size(); i++) {
