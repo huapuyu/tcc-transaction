@@ -7,19 +7,19 @@
     <context:component-scan base-package="org.mengyun.tcctransaction.sample.dubbo"/>
 
     <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
-        <property name="dataSource" ref="redPacketDataSource"/>
+        <property name="dataSource" ref="level3DataSource"/>
         <property name="mapperLocations" value="classpath*:config/sqlmap/main/sample-dubbo-*.xml"/>
     </bean>
 
-    <bean id="redPacketAccountDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
+    <bean id="level3AccountDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
         <property name="mapperInterface"
-                  value="org.mengyun.tcctransaction.sample.dubbo.redpacket.infrastructure.dao.RedPacketAccountDao"></property>
+                  value="org.mengyun.tcctransaction.sample.dubbo.level3.infrastructure.dao.Level3AccountDao"></property>
         <property name="sqlSessionFactory" ref="sqlSessionFactory"></property>
     </bean>
 
     <bean id="transactionRepository"
           class="org.mengyun.tcctransaction.spring.repository.SpringJdbcTransactionRepository">
-        <property name="dataSource" ref="redPacketDataSource"/>
+        <property name="dataSource" ref="level3DataSource"/>
     </bean>
     
     <!-- <bean id="transactionRepository"

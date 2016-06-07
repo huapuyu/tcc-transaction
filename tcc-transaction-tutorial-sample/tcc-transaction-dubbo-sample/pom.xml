@@ -17,6 +17,8 @@
         <module>tcc-transaction-dubbo-order</module>
         <module>tcc-transaction-dubbo-redpacket</module>
         <module>tcc-transaction-dubbo-redpacket-api</module>
+        <module>tcc-transaction-dubbo-level3</module>
+        <module>tcc-transaction-dubbo-level3-api</module>
     </modules>
 
 </project>
