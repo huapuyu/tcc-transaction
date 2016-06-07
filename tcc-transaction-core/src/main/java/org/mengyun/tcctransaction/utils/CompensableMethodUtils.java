@@ -9,7 +9,8 @@ public class CompensableMethodUtils {
 		if (transactionContext == null && isCompensable) {
 			// isRootTransactionMethod
 			return MethodType.ROOT;
-		} else if (transactionContext == null && !isCompensable) {
+//		} else if (transactionContext == null && !isCompensable) {
+		} else if (!isCompensable) {
 			// isSoaConsumer
 			return MethodType.CONSUMER;
 		} else if (transactionContext != null && isCompensable) {
