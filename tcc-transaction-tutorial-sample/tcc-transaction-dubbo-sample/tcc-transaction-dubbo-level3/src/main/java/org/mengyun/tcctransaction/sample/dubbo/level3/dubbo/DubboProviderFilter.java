@@ -33,20 +33,12 @@ public class DubboProviderFilter implements Filter {
 			if (result != null && result instanceof RpcResult) {
 				RpcResult rpcResult = (RpcResult) result;
 				Throwable throwable = rpcResult.getException();
-				Object resultObject = rpcResult.getValue();
-				if (resultObject instanceof BaseResponse) {
-					BaseResponse baseResponse = (BaseResponse) resultObject;
-					if (throwable != null) {
-						baseResponse.setErrorCode("1111");
-						rpcResult.setException(null);
-					}
-				} else if (resultObject instanceof String
-						|| resultObject instanceof Integer
-						|| resultObject instanceof Long
-						|| resultObject instanceof Double
-						|| resultObject instanceof Float
-						|| resultObject instanceof Character
-						|| resultObject instanceof Boolean) {
+				if (throwable != null) {
+					RpcResult rr = new RpcResult();
+					BaseResponse baseResponse = new BaseResponse();
+					baseResponse.setErrorCode("1111");
+					rr.setValue(baseResponse);
+					return rr;
 				}
 				return result;
 			}

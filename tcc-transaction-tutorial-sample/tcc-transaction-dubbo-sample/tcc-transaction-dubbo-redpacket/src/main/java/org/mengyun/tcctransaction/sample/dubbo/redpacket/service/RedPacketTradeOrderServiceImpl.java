@@ -30,7 +30,9 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
 
         redPacketAccountRepository.save(transferFromAccount);
         
-        return new BaseResponse();
+        BaseResponse baseResponse = new BaseResponse();
+		baseResponse.setErrorCode("2222");
+		return baseResponse;
     }
 
     public void confirmRecord(TransactionContext transactionContext, RedPacketTradeOrderDto tradeOrderDto) {

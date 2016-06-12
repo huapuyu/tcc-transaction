@@ -36,7 +36,9 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
         
         level3Service.record(transactionContext, buildRedPacketTradeOrderDto(tradeOrderDto));
         
-        return new BaseResponse();
+        BaseResponse baseResponse = new BaseResponse();
+		baseResponse.setErrorCode("2222");
+		return baseResponse;
     }
 
     public void confirmRecord(TransactionContext transactionContext, CapitalTradeOrderDto tradeOrderDto) {
