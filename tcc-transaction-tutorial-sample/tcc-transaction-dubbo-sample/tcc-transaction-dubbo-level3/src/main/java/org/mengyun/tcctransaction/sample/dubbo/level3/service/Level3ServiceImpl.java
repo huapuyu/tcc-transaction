@@ -24,17 +24,17 @@ public class Level3ServiceImpl implements Level3Service {
     public BaseResponse record(TransactionContext transactionContext, Level3Dto level3Dto) {
         System.out.println("level3 try record called");
         
-//        throw new RuntimeException();
+        throw new RuntimeException();
 
-        Level3Account transferFromAccount = level3AccountRepository.findByUserId(level3Dto.getSelfUserId());
-
-        transferFromAccount.transferFrom(level3Dto.getAmount());
-
-        level3AccountRepository.save(transferFromAccount);
-        
-        BaseResponse baseResponse = new BaseResponse();
-        baseResponse.setErrorCode("1111");
-        return baseResponse;
+//        Level3Account transferFromAccount = level3AccountRepository.findByUserId(level3Dto.getSelfUserId());
+//
+//        transferFromAccount.transferFrom(level3Dto.getAmount());
+//
+//        level3AccountRepository.save(transferFromAccount);
+//        
+//        BaseResponse baseResponse = new BaseResponse();
+//        baseResponse.setErrorCode("1111");
+//        return baseResponse;
     }
 
     public void confirmRecord(TransactionContext transactionContext, Level3Dto level3Dto) {
