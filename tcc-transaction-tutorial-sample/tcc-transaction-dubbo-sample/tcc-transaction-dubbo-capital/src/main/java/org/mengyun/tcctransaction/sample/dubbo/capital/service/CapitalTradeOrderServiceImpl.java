@@ -2,6 +2,7 @@ package org.mengyun.tcctransaction.sample.dubbo.capital.service;
 
 import org.mengyun.tcctransaction.Compensable;
 import org.mengyun.tcctransaction.api.TransactionContext;
+import org.mengyun.tcctransaction.api.base.BaseResponse;
 import org.mengyun.tcctransaction.sample.dubbo.capital.api.CapitalTradeOrderService;
 import org.mengyun.tcctransaction.sample.dubbo.capital.api.dto.CapitalTradeOrderDto;
 import org.mengyun.tcctransaction.sample.dubbo.capital.domain.entity.CapitalAccount;
@@ -24,7 +25,7 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
 
     @Override
     @Compensable(confirmMethod = "confirmRecord", cancelMethod = "cancelRecord")
-    public void record(TransactionContext transactionContext, CapitalTradeOrderDto tradeOrderDto) {
+    public BaseResponse record(TransactionContext transactionContext, CapitalTradeOrderDto tradeOrderDto) {
         System.out.println("capital try record called");
 
         CapitalAccount transferFromAccount = capitalAccountRepository.findByUserId(tradeOrderDto.getSelfUserId());
@@ -34,6 +35,8 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
         capitalAccountRepository.save(transferFromAccount);
         
         level3Service.record(transactionContext, buildRedPacketTradeOrderDto(tradeOrderDto));
+        
+        return new BaseResponse();
     }
 
     public void confirmRecord(TransactionContext transactionContext, CapitalTradeOrderDto tradeOrderDto) {

@@ -12,4 +12,6 @@ public @interface Compensable {
 	public String confirmMethod() default "";
 
 	public String cancelMethod() default "";
+	
+	public String[] errorCode() default "";
 }

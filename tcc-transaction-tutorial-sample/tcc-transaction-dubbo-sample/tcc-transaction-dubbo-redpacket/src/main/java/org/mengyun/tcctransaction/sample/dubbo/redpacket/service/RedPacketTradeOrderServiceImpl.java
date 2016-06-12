@@ -2,6 +2,7 @@ package org.mengyun.tcctransaction.sample.dubbo.redpacket.service;
 
 import org.mengyun.tcctransaction.Compensable;
 import org.mengyun.tcctransaction.api.TransactionContext;
+import org.mengyun.tcctransaction.api.base.BaseResponse;
 import org.mengyun.tcctransaction.sample.dubbo.redpacket.domain.entity.RedPacketAccount;
 import org.mengyun.tcctransaction.sample.dubbo.redpacket.domain.repository.RedPacketAccountRepository;
 import org.mengyun.tcctransaction.sample.dubbo.redpacket.api.RedPacketTradeOrderService;
@@ -20,7 +21,7 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
 
     @Override
     @Compensable(confirmMethod = "confirmRecord",cancelMethod = "cancelRecord")
-    public void record(TransactionContext transactionContext, RedPacketTradeOrderDto tradeOrderDto) {
+    public BaseResponse record(TransactionContext transactionContext, RedPacketTradeOrderDto tradeOrderDto) {
         System.out.println("red packet try record called");
 
         RedPacketAccount transferFromAccount = redPacketAccountRepository.findByUserId(tradeOrderDto.getSelfUserId());
@@ -28,6 +29,8 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
         transferFromAccount.transferFrom(tradeOrderDto.getAmount());
 
         redPacketAccountRepository.save(transferFromAccount);
+        
+        return new BaseResponse();
     }
 
     public void confirmRecord(TransactionContext transactionContext, RedPacketTradeOrderDto tradeOrderDto) {

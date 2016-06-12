@@ -2,6 +2,7 @@ package org.mengyun.tcctransaction.sample.dubbo.level3.service;
 
 import org.mengyun.tcctransaction.Compensable;
 import org.mengyun.tcctransaction.api.TransactionContext;
+import org.mengyun.tcctransaction.api.base.BaseResponse;
 import org.mengyun.tcctransaction.sample.dubbo.level3.api.Level3Service;
 import org.mengyun.tcctransaction.sample.dubbo.level3.api.dto.Level3Dto;
 import org.mengyun.tcctransaction.sample.dubbo.level3.domain.entity.Level3Account;
@@ -20,14 +21,20 @@ public class Level3ServiceImpl implements Level3Service {
 
     @Override
     @Compensable(confirmMethod = "confirmRecord", cancelMethod = "cancelRecord")
-    public void record(TransactionContext transactionContext, Level3Dto level3Dto) {
+    public BaseResponse record(TransactionContext transactionContext, Level3Dto level3Dto) {
         System.out.println("level3 try record called");
+        
+//        throw new RuntimeException();
 
         Level3Account transferFromAccount = level3AccountRepository.findByUserId(level3Dto.getSelfUserId());
 
         transferFromAccount.transferFrom(level3Dto.getAmount());
 
         level3AccountRepository.save(transferFromAccount);
+        
+        BaseResponse baseResponse = new BaseResponse();
+        baseResponse.setErrorCode("1111");
+        return baseResponse;
     }
 
     public void confirmRecord(TransactionContext transactionContext, Level3Dto level3Dto) {

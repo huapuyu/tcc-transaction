@@ -1,6 +1,7 @@
 package org.mengyun.tcctransaction.sample.dubbo.capital.api;
 
 import org.mengyun.tcctransaction.api.TransactionContext;
+import org.mengyun.tcctransaction.api.base.BaseResponse;
 import org.mengyun.tcctransaction.sample.dubbo.capital.api.dto.CapitalTradeOrderDto;
 
 /**
@@ -8,5 +9,5 @@ import org.mengyun.tcctransaction.sample.dubbo.capital.api.dto.CapitalTradeOrder
  */
 public interface CapitalTradeOrderService {
 
-    public void record(TransactionContext transactionContext,CapitalTradeOrderDto tradeOrderDto);
+    public BaseResponse record(TransactionContext transactionContext,CapitalTradeOrderDto tradeOrderDto);
 }

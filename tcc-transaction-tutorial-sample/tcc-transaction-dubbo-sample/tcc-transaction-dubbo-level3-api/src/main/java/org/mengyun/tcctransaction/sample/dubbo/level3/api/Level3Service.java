@@ -1,6 +1,7 @@
 package org.mengyun.tcctransaction.sample.dubbo.level3.api;
 
 import org.mengyun.tcctransaction.api.TransactionContext;
+import org.mengyun.tcctransaction.api.base.BaseResponse;
 import org.mengyun.tcctransaction.sample.dubbo.level3.api.dto.Level3Dto;
 
 /**
@@ -8,5 +9,5 @@ import org.mengyun.tcctransaction.sample.dubbo.level3.api.dto.Level3Dto;
  */
 public interface Level3Service {
 
-    public void record(TransactionContext transactionContext,Level3Dto level3Dto);
+    public BaseResponse record(TransactionContext transactionContext,Level3Dto level3Dto);
 }

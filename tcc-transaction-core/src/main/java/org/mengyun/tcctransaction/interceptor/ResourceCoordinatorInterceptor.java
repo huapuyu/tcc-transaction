@@ -13,10 +13,13 @@ import org.mengyun.tcctransaction.TransactionRepository;
 import org.mengyun.tcctransaction.api.TransactionContext;
 import org.mengyun.tcctransaction.api.TransactionStatus;
 import org.mengyun.tcctransaction.api.TransactionXid;
+import org.mengyun.tcctransaction.api.base.BaseResponse;
 import org.mengyun.tcctransaction.common.MethodType;
+import org.mengyun.tcctransaction.exception.ErrorCodeException;
 import org.mengyun.tcctransaction.support.TransactionConfigurator;
 import org.mengyun.tcctransaction.utils.CompensableMethodUtils;
 import org.mengyun.tcctransaction.utils.ReflectionUtils;
+import org.mengyun.tcctransaction.utils.StringUtils;
 
 public class ResourceCoordinatorInterceptor {
 
@@ -42,7 +45,14 @@ public class ResourceCoordinatorInterceptor {
 				break;
 			case CONSUMER:
 				generateAndEnlistConsumerParticipant(pjp);
-				break;
+				Object object = pjp.proceed(pjp.getArgs());
+				if (object instanceof BaseResponse) {
+					BaseResponse baseResponse = (BaseResponse) object;
+					if (StringUtils.isNotEmpty(baseResponse.getErrorCode()) && baseResponse.getErrorCode().equals("1111")) {
+						throw new ErrorCodeException(baseResponse);
+					}
+				}
+				return;
 			case PROVIDER:
 				generateAndEnlistProviderParticipant(pjp);
 				break;
