@@ -1,2 +1,2 @@
-dubboConsumerFilter=org.mengyun.tcctransaction.sample.dubbo.capital.dubbo.DubboConsumerFilter
-dubboProviderFilter=org.mengyun.tcctransaction.sample.dubbo.capital.dubbo.DubboProviderFilter
+dubboConsumerFilter=org.mengyun.tcctransaction.sample.dubbo.redpacket.dubbo.DubboConsumerFilter
+dubboProviderFilter=org.mengyun.tcctransaction.sample.dubbo.redpacket.dubbo.DubboProviderFilter
